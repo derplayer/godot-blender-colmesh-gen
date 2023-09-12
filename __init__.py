@@ -1,10 +1,10 @@
 bl_info = {
-	"name": "Create simple collision mesh",
-	"author": "Jon Eunan Quinlivan Domínguez",
-	"version": (1, 2),
+	"name": "Godot simple collision mesh generator",
+	"author": "Jon Eunan Quinlivan Domínguez, derplayer",
+	"version": (1, 2, 1),
 	"blender": (3, 3, 1),
 	"location": "View3D > Add > Mesh > Create Collision Mesh",
-	"description" : "Create simplified meshes for collision meshes using vertex bounding boxes",
+	"description" : "Generate simple collision meshes using vertex AABB or Decimate for Godot",
 	"warning": "",
     "doc_url": "",
 	"category": "Add Mesh",
@@ -170,9 +170,28 @@ class OBJECT_OT_create_collision(Operator):
         
 
     def genereate_bb_col(self, context):
-
+        
+        itemsFilter=[
+            'META',
+            'FONT',
+            'GPENCIL',
+            'ARMATURE',
+            'EMPTY',
+            'LIGHT',
+            'LAMP',
+            'CAMERA',
+        ]
+        
+        #deselect all invalid objects
+        for obj in bpy.context.selected_objects:
+            for item in itemsFilter:
+                if obj.type == item:
+                    obj.select_set(False)
+                else:
+                    bpy.context.view_layer.objects.active = obj
+        
         selection = bpy.context.selected_objects
-
+        
         edges=[]
         bb_verts = []
         faces = []
@@ -191,7 +210,6 @@ class OBJECT_OT_create_collision(Operator):
                 faces = self.make_faces(context,bb_verts)
 
         for ct,m_object in enumerate(selection):
-
             bb_mesh = bpy.data.meshes.new(name=m_object.name + "_colmesh")
 
             if(self.mode == "BOUND"):
@@ -278,7 +296,8 @@ class OBJECT_OT_create_collision(Operator):
                 obj_name = m_object.name + self.suffix
                 bb_object=bpy.data.objects.new(obj_name, bb_mesh)
 
-                bpy.context.collection.objects.link(bb_object)
+                #bpy.context.collection.objects.link(bb_object)
+                m_object.users_collection[0].objects.link(bb_object) # hacky (same obj can be in muiltiple collections)
                 if(self.parent):
                     bb_object.parent=m_object
 
@@ -290,7 +309,8 @@ class OBJECT_OT_create_collision(Operator):
                 bb_object.data = m_object.data.copy()
                 bb_object.name = obj_name
 
-                bpy.context.collection.objects.link(bb_object)
+                #bpy.context.collection.objects.link(bb_object)
+                m_object.users_collection[0].objects.link(bb_object) # hacky (same obj can be in muiltiple collections)
 
                 modifier = bb_object.modifiers.new(modifier_name,'DECIMATE')
                 modifier.ratio = self.decimate_rat
