@@ -109,6 +109,11 @@ class OBJECT_OT_create_collision(Operator):
         description="All selected objects will generate the same mesh",
         default=False,
     )
+    invis_mesh : BoolProperty(
+        name='Invisible col mesh',
+        description="The generated mesh will be invisible",
+        default=True,
+    )
 
     parent : BoolProperty(
         name='Auto child',
@@ -158,6 +163,8 @@ class OBJECT_OT_create_collision(Operator):
 
                 row = layout.row(align=True)
                 row.prop(self,'shared_mesh')
+                row = layout.row(align=True)
+                row.prop(self,'invis_mesh')
 
         elif(self.mode == "DECIM"):
             row = layout.row(align=True)
@@ -298,6 +305,8 @@ class OBJECT_OT_create_collision(Operator):
 
                 #bpy.context.collection.objects.link(bb_object)
                 m_object.users_collection[0].objects.link(bb_object) # hacky (same obj can be in muiltiple collections)
+                if(self.invis_mesh == True):
+                    bb_object.hide_set(True)
                 if(self.parent):
                     bb_object.parent=m_object
 
