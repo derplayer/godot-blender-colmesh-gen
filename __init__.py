@@ -1,7 +1,7 @@
 bl_info = {
 	"name": "Godot simple collision mesh generator",
 	"author": "Jon Eunan Quinlivan Domínguez, derplayer",
-	"version": (1, 2, 1),
+	"version": (1, 2, 2),
 	"blender": (3, 3, 1),
 	"location": "View3D > Add > Mesh > Create Collision Mesh",
 	"description" : "Generate simple collision meshes using vertex AABB or Decimate for Godot",
@@ -23,7 +23,7 @@ class OBJECT_OT_create_collision(Operator):
     bl_idname = "mesh.create_simple_collision"
     bl_label = "Create Simplified Collision Mesh"
     bl_options = {'REGISTER', 'UNDO'}
-
+    
     mode : EnumProperty(
         name='Mode',
         description="Collision Generation Mode",
@@ -107,18 +107,18 @@ class OBJECT_OT_create_collision(Operator):
     shared_mesh : BoolProperty(
         name='Shared mesh',
         description="All selected objects will generate the same mesh",
-        default=False,
+        default=True,
     )
     invis_mesh : BoolProperty(
         name='Invisible col mesh',
         description="The generated mesh will be invisible",
-        default=True,
+        default=False,
     )
 
     parent : BoolProperty(
         name='Auto child',
         description="Make generated object a child of the original mesh",
-        default=True,
+        default=False,
     )
 
     suffix: StringProperty(
@@ -130,7 +130,6 @@ class OBJECT_OT_create_collision(Operator):
     def execute(self, context):
 
         self.genereate_bb_col(context)
-
         return {'FINISHED'}
 
     def draw(self,context):
@@ -202,7 +201,8 @@ class OBJECT_OT_create_collision(Operator):
         edges=[]
         bb_verts = []
         faces = []
-
+        colmesh_list=[]
+        
         active_object = bpy.context.view_layer.objects.active
         if(active_object is not None):
             if(self.subdiv_type == "DIV"):
@@ -275,17 +275,17 @@ class OBJECT_OT_create_collision(Operator):
                     bb_mesh.transform(mat)
                     bb_mesh.update()
                 else:
-                    if(not self.shared_mesh or active_object is None):
-                        if(self.subdiv_type == "DIV"):
-                            bb_verts = self.divide_mesh_by_div(context,m_object.data.vertices)
-                        elif(self.subdiv_type == "CHK"):
-                            bb_verts = self.divide_mesh_by_chk(context,m_object.data.vertices)
+                    #if(not self.shared_mesh or active_object is None):
+                    if(self.subdiv_type == "DIV"):
+                        bb_verts = self.divide_mesh_by_div(context,m_object.data.vertices)
+                    elif(self.subdiv_type == "CHK"):
+                        bb_verts = self.divide_mesh_by_chk(context,m_object.data.vertices)
 
-                        if(self.collapse != "NON"):
-                            bb_verts = self.collapse_bb(context,bb_verts)
+                    if(self.collapse != "NON"):
+                        bb_verts = self.collapse_bb(context,bb_verts)
 
-                        if(len(bb_verts)>7):
-                            faces = self.make_faces(context,bb_verts)
+                    if(len(bb_verts)>7):
+                        faces = self.make_faces(context,bb_verts)
 
                     bb_mesh.from_pydata(bb_verts, edges, faces)
                     bb_mesh.update()
@@ -305,10 +305,15 @@ class OBJECT_OT_create_collision(Operator):
 
                 #bpy.context.collection.objects.link(bb_object)
                 m_object.users_collection[0].objects.link(bb_object) # hacky (same obj can be in muiltiple collections)
-                if(self.invis_mesh == True):
-                    bb_object.hide_set(True)
                 if(self.parent):
                     bb_object.parent=m_object
+                else:
+                    bb_object.location = m_object.location
+                    bb_object.scale = m_object.scale
+                    bb_object.dimensions = m_object.dimensions
+                    
+                # add colmesh to list
+                colmesh_list.append(bb_object)
 
             elif(self.mode == "DECIM"):
                 obj_name = m_object.name + self.suffix
@@ -328,6 +333,32 @@ class OBJECT_OT_create_collision(Operator):
 
                 if(self.parent):
                     bb_object.parent=m_object
+                else:
+                    bb_object.location = m_object.location
+                    bb_object.scale = m_object.scale
+                    bb_object.dimensions = m_object.dimensions
+                    
+                # add colmesh to list
+                colmesh_list.append(bb_object)
+                    
+        if(self.shared_mesh): # join colmesh by suffix filter
+            for collection in bpy.data.collections:
+                bpy.ops.object.select_all(action='DESELECT')
+                for obj in collection.objects:
+                    if self.suffix in obj.name:
+                        bpy.context.view_layer.objects.active = obj
+                        obj.select_set(True)
+                try:        
+                    bpy.ops.object.join()
+                    if(self.invis_mesh):
+                        bpy.context.view_layer.objects.active.hide_set(True)
+                except:
+                    print("Finished! (ignore last new created join colmesh!)")
+
+        # make colmesh invisible
+        if(self.invis_mesh == True and self.shared_mesh == False):
+            for colmesh in colmesh_list:
+                colmesh.hide_set(True)
 
     def divide_mesh_by_div(self,context,vertices):
 
