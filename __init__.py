@@ -160,10 +160,10 @@ class OBJECT_OT_create_collision(Operator):
                 row = layout.row(align=True)
                 row.prop(self,'covex_mesh')
 
-                row = layout.row(align=True)
-                row.prop(self,'shared_mesh')
-                row = layout.row(align=True)
-                row.prop(self,'invis_mesh')
+            row = layout.row(align=True)
+            row.prop(self,'shared_mesh')
+            row = layout.row(align=True)
+            row.prop(self,'invis_mesh')
 
         elif(self.mode == "DECIM"):
             row = layout.row(align=True)
