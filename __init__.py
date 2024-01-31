@@ -1,7 +1,7 @@
 bl_info = {
 	"name": "Godot simple collision mesh generator",
 	"author": "Jon Eunan Quinlivan Domínguez, derplayer",
-	"version": (1, 2, 2),
+	"version": (1, 2, 3),
 	"blender": (3, 3, 1),
 	"location": "View3D > Add > Mesh > Create Collision Mesh",
 	"description" : "Generate simple collision meshes using vertex AABB or Decimate for Godot",
@@ -205,16 +205,17 @@ class OBJECT_OT_create_collision(Operator):
         
         active_object = bpy.context.view_layer.objects.active
         if(active_object is not None):
-            if(self.subdiv_type == "DIV"):
-                bb_verts = self.divide_mesh_by_div(context,active_object.data.vertices)
-            elif(self.subdiv_type == "CHK"):
-                bb_verts = self.divide_mesh_by_chk(context,active_object.data.vertices)
+            if(active_object.data is not None):
+                if(self.subdiv_type == "DIV"):
+                    bb_verts = self.divide_mesh_by_div(context,active_object.data.vertices)
+                elif(self.subdiv_type == "CHK"):
+                    bb_verts = self.divide_mesh_by_chk(context,active_object.data.vertices)
 
-            if(self.collapse != "NON"):
-                bb_verts = self.collapse_bb(context,bb_verts)
+                if(self.collapse != "NON"):
+                    bb_verts = self.collapse_bb(context,bb_verts)
 
-            if(len(bb_verts)>7):
-                faces = self.make_faces(context,bb_verts)
+                if(len(bb_verts)>7):
+                    faces = self.make_faces(context,bb_verts)
 
         for ct,m_object in enumerate(selection):
             bb_mesh = bpy.data.meshes.new(name=m_object.name + "_colmesh")
